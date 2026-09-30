@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>合成大奶蛙</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="hud-left">
+      <div id="title">合成大奶蛙</div>
+      <div id="scores">分数 <span id="score">0</span> ｜ 最高 <span id="best">0</span></div>
+    </div>
+    <div id="hud-right">
+      <div id="next-label">下一个</div>
+      <img id="next-img" alt="下一个奶蛙">
+      <button id="btn-restart" type="button">重开</button>
+    </div>
+  </div>
+  <div class="overlay hidden" id="overlay-win">
+    <div class="card">
+      <h2>合成终极大奶蛙！</h2>
+      <p>本局 <span class="final-score"></span> 分</p>
+      <button id="btn-continue" type="button">继续无尽</button>
+      <button id="btn-win-restart" type="button">再来一局</button>
+    </div>
+  </div>
+  <div class="overlay hidden" id="overlay-over">
+    <div class="card">
+      <h2>堆太高啦！</h2>
+      <p>本局 <span class="final-score"></span> 分 ｜ 最高 <span class="final-best"></span> 分</p>
+      <button id="btn-over-restart" type="button">再来一局</button>
+    </div>
+  </div>
+</div>
+<script src="vendor/matter.min.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: #fdf6e3;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow: hidden; overscroll-behavior: none;
+}
+#wrap { position: relative; }
+#game {
+  display: block;
+  aspect-ratio: 420 / 700;
+  height: min(100dvh, calc(100vw * 700 / 420));
+  touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+#hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 8px 12px; pointer-events: none; color: #6b4f2a;
+}
+#title { font-size: 18px; font-weight: 700; }
+#scores { font-size: 13px; margin-top: 2px; }
+#hud-right { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+#next-label { font-size: 12px; }
+#next-img { width: 44px; height: 44px; object-fit: contain; }
+#btn-restart {
+  pointer-events: auto; border: none; border-radius: 999px;
+  background: #ffd666; color: #6b4f2a; font-size: 13px;
+  padding: 4px 14px; cursor: pointer;
+}
+.overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(60, 40, 10, 0.45);
+}
+.overlay.hidden { display: none; }
+.card {
+  background: #fffaf0; border-radius: 16px; padding: 24px 32px;
+  text-align: center; color: #6b4f2a; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+.card h2 { font-size: 22px; margin-bottom: 10px; }
+.card p { font-size: 14px; margin-bottom: 16px; }
+.card button {
+  border: none; border-radius: 999px; background: #ffd666; color: #6b4f2a;
+  font-size: 15px; padding: 8px 20px; margin: 0 6px; cursor: pointer;
+}
