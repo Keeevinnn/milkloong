@@ -24,6 +24,16 @@ def bg_like(r, g, b):
     return min(r, g, b) > 170 and max(r, g, b) - min(r, g, b) < 30
 
 
+def shadow_like(r, g, b):
+    """地面残影灰：低饱和中亮灰。仅对 SHADOW_FLOOD 指定的源启用，
+    以免吞掉 s5/s6 保留的软地影（同色域但控制器已验收）。"""
+    return max(r, g, b) - min(r, g, b) < 25 and min(r, g, b) > 120
+
+
+# 启用阴影泛洪分支的源（s3 底边锯齿灰地残）
+SHADOW_FLOOD = {"s3"}
+
+
 def tip_like(r, g, b):
     """上象限棍头插进下象限顶部：黑核及其与黄头/白底的混色（橄榄灰）。
     max<202 以避开头部侧面偏绿的阴影带 (205,211,99) 等。"""
@@ -153,6 +163,22 @@ def inpaint(px, w, h, mask):
                     mode = "lerp"
                 span = xr - xl
                 edge = max(3, (x1 - x0 + 1) // 4)
+                # 体侧取色：自邻像素向体内探 4px，取最暖(r-g)者，
+                # 跳过棍投在体侧的橄榄阴影带(g>=r)，避免填出绿色抹痕（s6 冠右）
+                bx = xl if rb else xr
+                bdx = -1 if rb else 1
+                body, bv = None, -999
+                xx2 = bx
+                for _ in range(4):
+                    if 0 <= xx2 < w:
+                        c = px[xx2, y][:3]
+                        if c[0] - c[1] > bv:
+                            bv, body = c[0] - c[1], c
+                        if bv >= 15:
+                            break
+                    xx2 += bdx
+                if body is None:
+                    body = cl if rb else cr
                 for xx in range(x0, x1 + 1):
                     if mode == "lerp":
                         t = (xx - xl) / span
@@ -164,13 +190,14 @@ def inpaint(px, w, h, mask):
                     elif rb and xx > x1 - edge:
                         px[xx, y] = (255, 255, 255, 255)
                     else:
-                        px[xx, y] = tuple(cl if rb else cr) + (255,)
+                        px[xx, y] = tuple(body) + (255,)
             else:
                 x += 1
 
 
-def flood_bg(px, w, h):
-    """从四边泛洪，把连通的白底/软阴影置透明；透明区可穿越，不透明非背景区停止。"""
+def flood_bg(px, w, h, shadow=False):
+    """从四边泛洪，把连通的白底/软阴影置透明；透明区可穿越，不透明非背景区停止。
+    shadow=True 时额外接受 shadow_like 灰影（主体内部封闭，不会误吞）。"""
     seen = bytearray(w * h)
     dq = deque()
     for x in range(w):
@@ -187,11 +214,45 @@ def flood_bg(px, w, h):
         seen[i] = 1
         r, g, b, a = px[x, y]
         if a:
-            if not bg_like(r, g, b):
+            if not (bg_like(r, g, b) or (shadow and shadow_like(r, g, b))):
                 continue          # 不透明的主体：停止扩散
             px[x, y] = (0, 0, 0, 0)
         dq.append((x + 1, y)); dq.append((x - 1, y))
         dq.append((x, y + 1)); dq.append((x, y - 1))
+
+
+def drop_small(px, w, h):
+    """删除面积 < 总面积 0.5% 的不透明连通块（最大块恒保留），清除游离残料。"""
+    lab = bytearray(w * h)
+    comps = []
+    for start in range(w * h):
+        if lab[start] or not px[start % w, start // w][3]:
+            continue
+        cid = len(comps) + 1
+        cells = [start]
+        lab[start] = cid
+        dq = deque([start])
+        while dq:
+            i = dq.popleft()
+            x, y = i % w, i // w
+            for nx in (x - 1, x, x + 1):
+                for ny in (y - 1, y, y + 1):
+                    if 0 <= nx < w and 0 <= ny < h:
+                        j = ny * w + nx
+                        if not lab[j] and px[nx, ny][3]:
+                            lab[j] = cid
+                            cells.append(j)
+                            dq.append(j)
+        comps.append(cells)
+    if not comps:
+        return
+    thresh = w * h * 0.005
+    biggest = max(range(len(comps)), key=lambda k: len(comps[k]))
+    for k, cells in enumerate(comps):
+        if k == biggest or len(cells) >= thresh:
+            continue
+        for i in cells:
+            px[i % w, i // w] = (0, 0, 0, 0)
 
 
 def trim_square(img):
@@ -224,7 +285,8 @@ def build(key, fname, quad):
         for i in range(w * h):
             mask[i] = 1 if mt[i] else (2 if ms[i] else 0)
         inpaint(px, w, h, mask)
-    flood_bg(px, w, h)
+    flood_bg(px, w, h, shadow=key in SHADOW_FLOOD)
+    drop_small(px, w, h)
     out = trim_square(im)
     out.save(OUT / f"{key}.png")
     print(key, "ok", out.size)
