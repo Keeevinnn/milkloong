@@ -2,7 +2,7 @@ from pathlib import Path
 from PIL import Image
 
 OUT = Path(__file__).resolve().parent.parent / "assets" / "sprites"
-for n in range(1, 8):
+for n in range(1, 10):
     p = OUT / f"s{n}.png"
     im = Image.open(p)
     assert im.size == (512, 512), (p, im.size)

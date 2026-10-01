@@ -10,10 +10,12 @@ new Function(readFileSync(join(root, "js/rules.js"), "utf8"))();
 const R = globalThis.MF.rules;
 assert.strictEqual(R.W, 420);
 assert.strictEqual(R.H, 700);
-assert.strictEqual(R.MAX_STAGE, 7);
+assert.strictEqual(R.MAX_STAGE, 9);
 assert.strictEqual(R.STAGES[7].r, 92);
+assert.strictEqual(R.STAGES[9].r, 132);
 assert.strictEqual(R.scoreFor(2), 1);
 assert.strictEqual(R.scoreFor(7), 21);
+assert.strictEqual(R.scoreFor(9), 36);
 assert.strictEqual(R.clamp(5, 10, 20), 10);
 assert.strictEqual(R.clampX(0, 24), 28);          // WALL=4 → 24+4
 assert.strictEqual(R.clampX(9999, 24), 392);      // 420-24-4

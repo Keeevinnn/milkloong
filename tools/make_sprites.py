@@ -16,6 +16,8 @@ SRC = {
     "s3": ("q17.jpeg", None),                            # 抱头震惊
     "s5": ("q13.gif", None),                             # 蛋形捧腹笑
     "s7": ("q01.jpeg", None),                            # 粉色魔化终极
+    "s8": ("q07.png", None),                           # 弯腰 S 形大笑
+    "s9": ("q09.jpeg", None),                          # 绿色站立捧腹大笑
 }
 
 
@@ -30,8 +32,14 @@ def shadow_like(r, g, b):
     return max(r, g, b) - min(r, g, b) < 25 and min(r, g, b) > 120
 
 
-# 启用阴影泛洪分支的源（s3 底边锯齿灰地残）
-SHADOW_FLOOD = {"s3"}
+# 启用阴影泛洪分支的源（s3 底边锯齿灰地残；s8/s9 脚下软影）
+SHADOW_FLOOD = {"s3", "s8", "s9"}
+
+# 水印字与主体轮廓相连、flood/drop_small 都清不掉时：在该源矩形内把白字
+# 及其抗alias混边（b 高且 g-b 小）按列竖填——上下都探到主体绿才填两者均值，
+# 轮廓列因此复原；落在白底上的字上下探不到绿，保持白待 flood 清除。
+# s9 右下“豆包AI生成”用（字压在右腿右缘上）。
+WM_INPAINT = {"s9": (0.80, 0.93, 0.99, 1.0)}
 
 
 def tip_like(r, g, b):
@@ -285,8 +293,42 @@ def build(key, fname, quad):
         for i in range(w * h):
             mask[i] = 1 if mt[i] else (2 if ms[i] else 0)
         inpaint(px, w, h, mask)
+    if key in WM_INPAINT:
+        x0, y0, x1, y1 = WM_INPAINT[key]
+
+        def green_dom(c):
+            return c[1] - c[2] >= 80
+
+        def wm_like(c):
+            return c[2] > 110 and c[1] - c[2] < 80
+
+        for xx in range(int(w * x0), min(w, int(w * x1) + 1)):
+            for yy in range(int(h * y0), min(h, int(h * y1) + 1)):
+                if not wm_like(px[xx, yy]):
+                    continue
+                up = dn = None
+                for uy in range(yy - 1, max(yy - 90, -1), -1):
+                    if green_dom(px[xx, uy]):
+                        up = px[xx, uy][:3]
+                        break
+                for dy in range(yy + 1, min(yy + 90, h)):
+                    if green_dom(px[xx, dy]):
+                        dn = px[xx, dy][:3]
+                        break
+                if up is not None and dn is not None:
+                    px[xx, yy] = tuple((u + d) // 2 for u, d in zip(up, dn)) + (255,)
+        # 竖填留在轮廓列的浅混色（上下取样到边缘抗alias）向内取纯色抹平
+        for xx in range(int(w * x0) + 2, min(w, int(w * x1) + 1)):
+            for yy in range(int(h * y0), min(h, int(h * y1) + 1)):
+                r, g, b, a = px[xx, yy]
+                if a and b > 150 and g - b < 60 and green_dom(px[xx - 2, yy]):
+                    px[xx, yy] = px[xx - 2, yy]
     flood_bg(px, w, h, shadow=key in SHADOW_FLOOD)
     drop_small(px, w, h)
+    for yy in range(h):
+        for xx in range(w):
+            if px[xx, yy][3] <= 8:
+                px[xx, yy] = (0, 0, 0, 0)
     out = trim_square(im)
     out.save(OUT / f"{key}.png")
     print(key, "ok", out.size)

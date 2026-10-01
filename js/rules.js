@@ -2,7 +2,7 @@ window.MF = window.MF || {};
 MF.rules = (function () {
   "use strict";
   var W = 420, H = 700, AIM_Y = 60, DANGER_Y = 110, WALL = 4;
-  var MAX_STAGE = 7, ULTIMATE_BONUS = 100;
+  var MAX_STAGE = 9, ULTIMATE_BONUS = 100;
   var STAGES = [
     null,
     { name: "比耶",       r: 24, score: 0,  sprite: "s1" },
@@ -11,7 +11,9 @@ MF.rules = (function () {
     { name: "捧腹(蹲)",   r: 51, score: 6,  sprite: "s4" },
     { name: "蛋形捧腹笑", r: 63, score: 10, sprite: "s5" },
     { name: "比心(盘腿)", r: 76, score: 15, sprite: "s6" },
-    { name: "终极大奶蛙", r: 92, score: 21, sprite: "s7" }
+    { name: "粉蛙狂笑",   r: 92,  score: 21, sprite: "s7" },
+    { name: "弯腰狂笑",   r: 110, score: 28, sprite: "s8" },
+    { name: "终极大奶蛙", r: 132, score: 36, sprite: "s9" }
   ];
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
   function clampX(x, r) { return clamp(x, r + WALL, W - r - WALL); }

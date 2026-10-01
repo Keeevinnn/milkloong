@@ -12,6 +12,7 @@
     overTimer: 0, wonShown: false, last: 0
   };
   var el = {};
+  var STEP = 1000 / 60, acc = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -89,7 +90,7 @@
 
   function restart() {
     MF.physics.reset();
-    S.score = 0; S.overTimer = 0; S.wonShown = false; S.cooldownUntil = 0;
+    S.score = 0; S.overTimer = 0; S.wonShown = false; S.cooldownUntil = 0; acc = 0;
     el.score.textContent = 0;
     el.win.classList.add("hidden"); el.over.classList.add("hidden");
     S.next = 0; S.aim = null;
@@ -102,7 +103,11 @@
     var dt = Math.min(ts - (S.last || ts), 50);
     S.last = ts;
     if (S.mode === "playing") {
-      MF.physics.step(1000 / 60);
+      acc += dt;
+      if (acc > 200) acc = 200;
+      while (acc >= STEP) { MF.physics.step(STEP); acc -= STEP; }
+    } else {
+      acc = 0;
     }
     var warning = S.mode === "playing" && checkFail(dt);
     MF.render.frame({
