@@ -16,3 +16,15 @@
 ## 声明
 
 本项目为粉丝二创作品，非商用。角色形象版权归原作者方所有。
+
+## 素材再生成
+
+棋子贴图由 `tools/make_sprites.py` 从 `art/raw/` 原始素材裁剪去底生成（需 `pip install pillow`）：
+
+python tools/make_sprites.py && python tools/check_sprites.py
+
+## 上线 GitHub Pages（后续步骤）
+
+1. git init 并推送本仓库（art/raw 已被 .gitignore 排除）
+2. GitHub 仓库 Settings → Pages → 分支 main / 目录 root
+3. 访问 https://<user>.github.io/<repo>/
