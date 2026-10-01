@@ -1,9 +1,13 @@
 (function () {
   "use strict";
   var R = MF.rules;
+
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
   var S = {
     mode: "boot", score: 0,
-    best: Number(localStorage.getItem("milkfrog-best") || 0),
+    best: Number(lsGet("milkfrog-best")) || 0,
     aim: null, next: 0, cooldownUntil: 0,
     overTimer: 0, wonShown: false, last: 0
   };
@@ -21,7 +25,7 @@
     $("btn-win-restart").addEventListener("click", restart);
     $("btn-over-restart").addEventListener("click", restart);
     $("btn-continue").addEventListener("click", function () {
-      S.mode = "playing"; el.win.classList.add("hidden");
+      S.mode = "playing"; S.overTimer = 0; el.win.classList.add("hidden");
     });
     el.best.textContent = S.best;
   }
@@ -39,7 +43,7 @@
     if (S.score > S.best) {
       S.best = S.score;
       el.best.textContent = S.best;
-      localStorage.setItem("milkfrog-best", String(S.best));
+      lsSet("milkfrog-best", String(S.best));
     }
   }
 
@@ -100,7 +104,7 @@
     if (S.mode === "playing") {
       MF.physics.step(1000 / 60);
     }
-    var warning = S.mode === "playing" && checkFail(S.mode === "playing" ? dt : 0);
+    var warning = S.mode === "playing" && checkFail(dt);
     MF.render.frame({
       pieces: MF.physics.pieces().map(function (b) {
         return { x: b.position.x, y: b.position.y, r: b.circleRadius, angle: b.angle, stage: b.plugin.stage };
