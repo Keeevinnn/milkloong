@@ -9,16 +9,19 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 # key -> (源文件, 象限框或 None)；象限为比例 (x0, y0, x1, y1)
 SRC = {
-    "s4": ("source-4poses.png", (0.0, 0.0, 0.5, 0.5)),   # 捧腹(蹲)
+    "s4": ("q02.gif", None),                             # 仰头张嘴狂笑
     "s1": ("source-4poses.png", (0.5, 0.0, 1.0, 0.5)),   # 比耶
     "s2": ("source-4poses.png", (0.0, 0.5, 0.5, 1.0)),   # 比心(站)
-    "s6": ("source-4poses.png", (0.5, 0.5, 1.0, 1.0)),   # 比心(盘腿)
+    "s6": ("q15.jpeg", None),                            # 圣诞帽捧腹笑
     "s3": ("q17.jpeg", None),                            # 抱头震惊
     "s5": ("q13.gif", None),                             # 蛋形捧腹笑
     "s7": ("q01.jpeg", None),                            # 粉色魔化终极
     "s8": ("q07.png", None),                           # 弯腰 S 形大笑
     "s9": ("q09.jpeg", None),                          # 绿色站立捧腹大笑
 }
+
+# GIF 源取第几帧（0 基）；不写取第 0 帧
+FRAME = {"s4": 30}
 
 
 def bg_like(r, g, b):
@@ -222,7 +225,8 @@ def flood_bg(px, w, h, shadow=False):
         seen[i] = 1
         r, g, b, a = px[x, y]
         if a:
-            if not (bg_like(r, g, b) or (shadow and shadow_like(r, g, b))):
+            is_bg = min(r, g, b) > 170 and max(r, g, b) - min(r, g, b) < 30
+            if not (is_bg or (shadow and shadow_like(r, g, b))):
                 continue          # 不透明的主体：停止扩散
             px[x, y] = (0, 0, 0, 0)
         dq.append((x + 1, y)); dq.append((x - 1, y))
@@ -267,7 +271,7 @@ def trim_square(img):
     bbox = img.getbbox()
     img = img.crop(bbox)
     w, h = img.size
-    side = int(max(w, h) * 1.08)          # 4% 边距
+    side = int(max(w, h) * 1.03)          # ~1.5% 边距：配合 render 1.08x 绘制消除空气墙
     canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     canvas.paste(img, ((side - w) // 2, (side - h) // 2), img)
     return canvas.resize((512, 512), Image.LANCZOS)
@@ -276,7 +280,7 @@ def trim_square(img):
 def build(key, fname, quad):
     im = Image.open(RAW / fname)
     try:
-        im.seek(0)
+        im.seek(FRAME.get(key, 0))
     except Exception:
         pass
     im = im.convert("RGBA")

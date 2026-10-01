@@ -1,7 +1,7 @@
 window.MF = window.MF || {};
 MF.rules = (function () {
   "use strict";
-  var W = 420, H = 700, AIM_Y = 60, DANGER_Y = 110, WALL = 4;
+  var W = 500, H = 700, AIM_Y = 60, DANGER_Y = 110, WALL = 4;
   var MAX_STAGE = 9, ULTIMATE_BONUS = 100;
   var STAGES = [
     null,
@@ -21,7 +21,7 @@ MF.rules = (function () {
     return { x: clampX(x, r), y: clamp(y, r + WALL, H - r - WALL) };
   }
   function scoreFor(n) { return STAGES[n].score; }
-  function randSpawnStage(rand) { return rand() < 0.6 ? 1 : 2; }
+  function randSpawnStage(rand) { return rand() < 0.7 ? 1 : 2; }
   return {
     W: W, H: H, AIM_Y: AIM_Y, DANGER_Y: DANGER_Y, WALL: WALL,
     STAGES: STAGES, MAX_STAGE: MAX_STAGE, ULTIMATE_BONUS: ULTIMATE_BONUS,

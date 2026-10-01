@@ -2,7 +2,9 @@ MF.render = (function () {
   "use strict";
   var R = MF.rules;
   var ctx = null, dpr = 1;
-  var pops = [], texts = [], confetti = [];
+  var pops = [], texts = [], confetti = [], dust = [];
+  var fx = {}, shakeUntil = 0, shakeMag = 0;
+  var DRAW_K = 1.08;   // 贴图略大于碰撞圆：接触时视觉贴合，消除空气墙感
 
   function init(canvas) {
     dpr = window.devicePixelRatio || 1;
@@ -11,8 +13,30 @@ MF.render = (function () {
     ctx = canvas.getContext("2d");
   }
 
-  function addPop(x, y, r) { pops.push({ x: x, y: y, r: r, t: 0 }); }
   function addText(x, y, str) { texts.push({ x: x, y: y, str: str, t: 0 }); }
+  function addMerge(x, y, r, stage, id) {
+    pops.push({ x: x, y: y, r: r, t: 0 });
+    if (id) fx[id] = { popAt: performance.now(), sqAt: null, sq: 0 };
+    if (stage >= 6) { shakeUntil = performance.now() + 160; shakeMag = 2 + stage * 0.5; }
+  }
+
+  function addImpact(im) {
+    var now = performance.now();
+    [im.ia, im.ib].forEach(function (id) {
+      if (!id) return;
+      var f = fx[id] || (fx[id] = { popAt: null, sqAt: null, sq: 0 });
+      if (f.sqAt === null || im.s > f.sq) { f.sqAt = now; f.sq = im.s; }
+    });
+    var n = 3 + Math.round(5 * im.s);
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * 6.2832, v = 1 + Math.random() * 2.5 * im.s;
+      dust.push({
+        x: im.x, y: im.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1,
+        t: 0, life: 260 + Math.random() * 180, r: 1.5 + Math.random() * 2.5
+      });
+    }
+  }
+
   function addConfetti() {
     for (var i = 0; i < 80; i++) {
       confetti.push({
@@ -25,13 +49,33 @@ MF.render = (function () {
     }
   }
 
+  function pieceScale(id) {
+    var f = fx[id];
+    if (!f) return null;
+    var now = performance.now(), sx = 1, sy = 1, live = false;
+    if (f.popAt !== null && f.popAt !== undefined) {
+      var k = (now - f.popAt) / 260;
+      if (k >= 1) f.popAt = null;
+      else { live = true; var p = 0.35 * (1 - k) * Math.cos(k * Math.PI * 3); sx *= 1 + p; sy *= 1 + p; }
+    }
+    if (f.sqAt !== null && f.sqAt !== undefined) {
+      var q = (now - f.sqAt) / 180;
+      if (q >= 1) { f.sqAt = null; f.sq = 0; }
+      else { live = true; var d = 0.28 * f.sq * (1 - q); sx *= 1 + d; sy *= 1 - d; }
+    }
+    if (!live) delete fx[id];
+    return live ? { x: sx, y: sy } : null;
+  }
+
   function drawPiece(p) {
     var img = MF.sprites.get(p.stage);
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle || 0);
+    var sc = p.id ? pieceScale(p.id) : null;
+    if (sc) ctx.scale(sc.x, sc.y);
     if (img) {
-      ctx.drawImage(img, -p.r, -p.r, p.r * 2, p.r * 2);
+      ctx.drawImage(img, -p.r * DRAW_K, -p.r * DRAW_K, p.r * 2 * DRAW_K, p.r * 2 * DRAW_K);
     } else {
       ctx.fillStyle = "#ffd666";
       ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 6.2832); ctx.fill();
@@ -45,9 +89,14 @@ MF.render = (function () {
   function frame(view, dtMs) {
     var dt = dtMs / 1000;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var now = performance.now();
+    if (now < shakeUntil) {
+      var m = shakeMag * (shakeUntil - now) / 160;
+      ctx.translate((Math.random() - 0.5) * 2 * m, (Math.random() - 0.5) * 2 * m);
+    }
     var g = ctx.createLinearGradient(0, 0, 0, R.H);
     g.addColorStop(0, "#fff8e8"); g.addColorStop(1, "#ffe9c2");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, R.W, R.H);
+    ctx.fillStyle = g; ctx.fillRect(-8, -8, R.W + 16, R.H + 16);
 
     // 容器描边
     ctx.strokeStyle = "rgba(107,79,42,.35)"; ctx.lineWidth = 3;
@@ -80,13 +129,25 @@ MF.render = (function () {
 
     view.pieces.forEach(drawPiece);
 
-    // 合并 pop 光环
+    // 合并 pop 双层光环（外金内白闪）
     pops = pops.filter(function (p) { return (p.t += dtMs) < 200; });
     pops.forEach(function (p) {
       var k = p.t / 200;
       ctx.strokeStyle = "rgba(255,214,102," + (1 - k) + ")";
       ctx.lineWidth = 4 * (1 - k) + 1;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.7 + k * 0.6), 0, 6.2832); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255," + (0.9 * (1 - k)) + ")";
+      ctx.lineWidth = 3 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.3 + k * 0.5), 0, 6.2832); ctx.stroke();
+    });
+
+    // 撞击 dust
+    dust = dust.filter(function (d) { return (d.t += dtMs) < d.life; });
+    dust.forEach(function (d) {
+      d.x += d.vx; d.y += d.vy; d.vy += 0.12;
+      var k = d.t / d.life;
+      ctx.fillStyle = "rgba(255,244,214," + (0.8 * (1 - k)).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 - k * 0.5), 0, 6.2832); ctx.fill();
     });
 
     // 飘分
@@ -107,7 +168,15 @@ MF.render = (function () {
       ctx.fillStyle = c.c; ctx.fillRect(-c.s / 2, -c.s / 2, c.s, c.s * 0.6);
       ctx.restore();
     });
+
+    // 清掉已消失棋子的 fx
+    var alive = {};
+    view.pieces.forEach(function (p) { alive[p.id] = 1; });
+    Object.keys(fx).forEach(function (k) { if (!alive[k]) delete fx[k]; });
   }
 
-  return { init: init, frame: frame, addPop: addPop, addText: addText, addConfetti: addConfetti };
+  return {
+    init: init, frame: frame, addText: addText, addConfetti: addConfetti,
+    addMerge: addMerge, addImpact: addImpact
+  };
 })();

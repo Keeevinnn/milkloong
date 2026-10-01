@@ -48,9 +48,9 @@
     }
   }
 
-  function onMerge(ns, x, y) {
+  function onMerge(ns, x, y, id) {
     addScore(R.scoreFor(ns));
-    MF.render.addPop(x, y, R.STAGES[ns].r);
+    MF.render.addMerge(x, y, R.STAGES[ns].r, ns, id);
     MF.render.addText(x, y - R.STAGES[ns].r, "+" + R.scoreFor(ns));
     if (ns === R.MAX_STAGE && !S.wonShown) {
       S.wonShown = true;
@@ -106,13 +106,14 @@
       acc += dt;
       if (acc > 200) acc = 200;
       while (acc >= STEP) { MF.physics.step(STEP); acc -= STEP; }
+      MF.physics.takeImpacts().forEach(function (im) { MF.render.addImpact(im); });
     } else {
       acc = 0;
     }
     var warning = S.mode === "playing" && checkFail(dt);
     MF.render.frame({
       pieces: MF.physics.pieces().map(function (b) {
-        return { x: b.position.x, y: b.position.y, r: b.circleRadius, angle: b.angle, stage: b.plugin.stage };
+        return { id: b.id, x: b.position.x, y: b.position.y, r: b.circleRadius, angle: b.angle, stage: b.plugin.stage };
       }),
       aim: S.mode === "playing" ? S.aim : null,
       warning: warning, time: ts

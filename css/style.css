@@ -9,8 +9,8 @@ body {
 #wrap { position: relative; }
 #game {
   display: block;
-  aspect-ratio: 420 / 700;
-  height: min(100dvh, calc(100vw * 700 / 420));
+  aspect-ratio: 500 / 700;
+  height: min(100dvh, calc(100vw * 700 / 500));
   touch-action: none;
   user-select: none; -webkit-user-select: none;
 }
